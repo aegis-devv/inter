@@ -1,7 +1,7 @@
-# 🚀 MASTER 3D SCROLL-JACKING CANVAS BLUEPRINT v2.0
-### Autonomous Single-Prompt Framework for Next.js, GSAP, Web Audio & Cloudflare Edge
+# 🚀 MASTER 3D SCROLL-JACKING CANVAS BLUEPRINT v2.1
+### Universal Single-Prompt Framework for Next.js, GSAP, Web Audio & Cloudflare Edge
 
-> **Purpose**: A battle-tested, production-grade technical specification and single-prompt engine. Use this blueprint to transform any video (`.mp4`) into an ultra-smooth, 60fps Full HD canvas-scrubbed web experience with zero stutter, piecewise slow-motion room transition easing, multi-page App Router architecture, non-blocking mobile idle preloading, Web Audio synthesis, and 1-click Cloudflare deployment.
+> **Purpose**: A universal, production-grade technical specification and single-prompt engine. Use this blueprint to transform **any 3D video** (product turntable, exploded CAD assembly, architectural flythrough, drone landscape, or interior transition) into an ultra-smooth, 60fps Full HD canvas-scrubbed web experience with adaptive focal velocity remapping, multi-page App Router architecture, non-blocking mobile idle preloading, Web Audio synthesis, and 1-click Cloudflare deployment.
 
 ---
 
@@ -13,16 +13,16 @@
 You are an elite creative technologist and senior frontend architect building a production-grade, full-bleed 3D frame-scrubbed interactive web application using Next.js (App Router, Static Export), TypeScript, Tailwind CSS, GSAP ScrollTrigger, and the Web Audio API.
 
 ### 1. SPECIFICATIONS & INPUT VARIABLES
-- **Input Video**: `[INPUT_VIDEO_FILENAME.mp4]` in the project root.
+- **Input Video**: `[INPUT_VIDEO_FILENAME.mp4]` in the project root (3D product turntable, exploded view, architectural flythrough, or scene transition).
 - **Brand / Project Name**: `[INSERT_BRAND_NAME]`
 - **Color Palette**: `[INSERT_PRIMARY_COLOR, ACCENT_COLOR, BACKGROUND_COLOR, TEXT_COLOR]` (e.g. Alabaster `#FAF8F5`, Deep Charcoal `#12161F`, Ochre Gold `#C5A880`)
 - **Typography**: Editorial Serif (e.g. Cormorant Garamond / Playfair Display), Modern Sans (Plus Jakarta Sans / Inter), Monospace (Space Mono / JetBrains Mono)
 - **Target Pages & Routes**:
   1. `/` (Home: Full-bleed 3D Video Scrub Hero + Curated Overview Highlights)
-  2. `/work` (Dedicated Architectural / Product Showcase with Interactive Filter Pills)
-  3. `/philosophy` (Studio Ethos Manifesto + Tactile Material & Solar Trajectory Matrix)
-  4. `/journal` (Critical Essays, Monograph Notes & Studies)
-  5. `/contact` (Studio Commission Inquiry Form & Global Bureau Directory)
+  2. `/work` (Dedicated Showcase / Product Catalog with Filter Pills)
+  3. `/philosophy` (Design Ethos / Technical Specification & Material Matrix)
+  4. `/journal` (Case Studies, Monograph Notes & Articles)
+  5. `/contact` (Client Commission / Inquiry Form & Global Studio Directory)
 
 ---
 
@@ -41,16 +41,32 @@ You are an elite creative technologist and senior frontend architect building a 
 3. **DPR Capping**: Cap DPR to `1.0` on mobile and low-end devices (`deviceMemory < 4` or `hardwareConcurrency <= 4`) and `Math.min(window.devicePixelRatio || 1, 1.5)` on desktop to prevent fill-rate lag.
 4. **Instant First Paint**: Load and render `frame_0001.webp` synchronously on mount (zero black screen).
 5. **Non-Blocking Chunked Idle Preloading**: Do NOT spawn all image requests at once. Preload in small batches of 3–6 frames via `requestIdleCallback` (or 30ms timeouts) so mobile network pools and touch event threads stay 100% free and responsive for taps and navigation.
-6. **Continuous Damping Lerp Engine**: Implement a `requestAnimationFrame` lerp loop (`currentFrame += (targetFrame - currentFrame) * 0.14`) so rapid mouse-wheel notches or mobile touch drags interpolate like liquid honey with zero flashiness.
+6. **Continuous Damping Lerp Engine**: Implement a `requestAnimationFrame` damping loop:
+   $$\text{renderedFrame}_{k+1} = \text{renderedFrame}_k + (\text{targetFrame} - \text{renderedFrame}_k) \times \lambda \quad (\lambda \approx 0.14\text{ to }0.18)$$
+   This ensures rapid mouse-wheel notches or mobile touch drags interpolate like liquid honey with zero flashiness.
 
-#### PHASE 3: NON-LINEAR EASING & PINNED HOLD RUNWAY
+#### PHASE 3: ADAPTIVE FOCAL VELOCITY REMAPPING (Universal 3D Scroll Formula)
 1. **Scroll Runway**: Container `height: 450vh`. Sticky inner viewport `top: 0; height: 100vh; overflow: hidden`.
-2. **Piecewise Room Transition Easing (Slow Middle Movement)**:
-   - `0.00 → 0.18` Scroll: Entrance phase (Frames 0 to ~18%).
-   - `0.18 → 0.58` Scroll: **Cinematic Slow-Motion Room Flythrough** — dedicated 40% of active scroll runway with smooth cosine S-curve easing so moving between rooms feels deliberate, expansive, and smooth.
-   - `0.58 → 0.65` Scroll: Settling into final room perspective.
+2. **Universal Piecewise Focal Remapping Formula**:
+   In any 3D video (product rotation, mechanical exploded view, or environment transition), key transformations often occur quickly in the raw video. Allocate an extended portion (40%–60%) of the active scroll runway to this dynamic focal zone so the user can savour every detail without it rushing past.
+   
+   **Mathematical Remapping Formula**:
+   Let $p \in [0.0, 1.0]$ be the normalized active scrub progress (spanning $0.00 \to 0.65$ of total scroll).
+   Let $[F_{\text{start}}, F_{\text{end}}]$ be the key transformation frame ratio (e.g. frames $18\% \to 60\%$).
+   Let $[S_{\text{start}}, S_{\text{end}}]$ be the scroll runway allocated (e.g. scroll progress $0.18 \to 0.58$):
+   
+   $$\text{FrameRatio}(p) = \begin{cases} 
+   F_{\text{start}} \times \left(\frac{p}{S_{\text{start}}}\right) & p \le S_{\text{start}} \\
+   F_{\text{start}} + (F_{\text{end}} - F_{\text{start}}) \times \left[\frac{1 - \cos\left(\pi \cdot \frac{p - S_{\text{start}}}{S_{\text{end}} - S_{\text{start}}}\right)}{2}\right] & S_{\text{start}} < p \le S_{\text{end}} \\
+   F_{\text{end}} + (1.0 - F_{\text{end}}) \times \left(\frac{p - S_{\text{end}}}{1.0 - S_{\text{end}}}\right) & p > S_{\text{end}}
+   \end{cases}$$
+   
+   $$\text{TargetFrame} = \lfloor \text{FrameRatio}(p) \times (\text{TotalFrames} - 1) \rfloor$$
+
+3. **Pinned Hold Runway**:
+   - `0.00 → 0.65`: Scrubs the video using the adaptive focal velocity formula.
    - `0.65`: Triggers Web Audio harmonic chime.
-   - `0.65 → 1.00`: **PINNED HOLD RUNWAY** — Final frame locks crisp in place while an unobstructed floating glassmorphic **Bottom Action Deck** slides up (`bottom-6 sm:bottom-12`) before unpinning.
+   - `0.65 → 1.00`: **PINNED HOLD RUNWAY** — Final frame remains locked in place while an unobstructed floating glassmorphic **Bottom Action Deck** slides up (`bottom-6 sm:bottom-12`) before unpinning smoothly into the page.
 
 #### PHASE 4: EYE-SOOTHING UI/UX & MULTI-PAGE ROUTING
 1. **Zero AI Clutter / Pure Editorial**:
@@ -208,7 +224,7 @@ main().catch(console.error);
 
 ---
 
-### 2. Full-Bleed Lerp Canvas Scrub Engine (`components/HeroFullscreenScrub.tsx`)
+### 2. Universal Adaptive Easing & Lerp Canvas Scrub Engine (`components/HeroFullscreenScrub.tsx`)
 
 ```tsx
 'use client';
@@ -223,21 +239,35 @@ if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-// Piecewise easing allocating 40% of scroll runway to middle room transition
-function calculateTargetFrame(norm: number, totalFrames: number): number {
-  const f84Ratio = 84 / 476;
-  const f273Ratio = 273 / 476;
-
+/**
+ * Universal Adaptive Focal Remapping Function
+ * @param norm - Normalized scroll progress in scrub section (0.0 to 1.0)
+ * @param totalFrames - Total frame count in sequence
+ * @param focalStart - Video progress ratio where key 3D action starts (e.g. 0.18)
+ * @param focalEnd - Video progress ratio where key 3D action ends (e.g. 0.58)
+ * @param runwayStart - Scroll runway start ratio (e.g. 0.18)
+ * @param runwayEnd - Scroll runway end ratio (e.g. 0.58)
+ */
+function calculateAdaptiveTargetFrame(
+  norm: number,
+  totalFrames: number,
+  focalStart = 0.18,
+  focalEnd = 0.58,
+  runwayStart = 0.18,
+  runwayEnd = 0.58
+): number {
   let frameRatio: number;
-  if (norm <= 0.18) {
-    frameRatio = f84Ratio * (norm / 0.18);
-  } else if (norm <= 0.58) {
-    const t = (norm - 0.18) / 0.40;
+
+  if (norm <= runwayStart) {
+    frameRatio = focalStart * (norm / runwayStart);
+  } else if (norm <= runwayEnd) {
+    // Smooth Cosine S-Curve across the primary focal transformation
+    const t = (norm - runwayStart) / (runwayEnd - runwayStart);
     const smoothT = 0.5 - 0.5 * Math.cos(t * Math.PI);
-    frameRatio = f84Ratio + (f273Ratio - f84Ratio) * smoothT;
+    frameRatio = focalStart + (focalEnd - focalStart) * smoothT;
   } else {
-    const t = Math.min(1, (norm - 0.58) / 0.42);
-    frameRatio = f273Ratio + (1.0 - f273Ratio) * t;
+    const t = Math.min(1, (norm - runwayEnd) / (1.0 - runwayEnd));
+    frameRatio = focalEnd + (1.0 - focalEnd) * t;
   }
 
   return Math.min(totalFrames - 1, Math.max(0, Math.floor(frameRatio * (totalFrames - 1))));
@@ -398,7 +428,7 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound }: { isMuted: boole
           const progress = self.progress;
           setScrollProgress(progress);
           const rawNorm = Math.min(1, progress / 0.65);
-          targetFrameRef.current = calculateTargetFrame(rawNorm, count);
+          targetFrameRef.current = calculateAdaptiveTargetFrame(rawNorm, count);
 
           if (progress >= 0.65 && !isSurpriseActiveRef.current) {
             isSurpriseActiveRef.current = true;
@@ -432,7 +462,7 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound }: { isMuted: boole
         <div className="absolute inset-0 z-20 flex flex-col justify-between px-6 sm:px-16 py-24 sm:py-32 pointer-events-none transition-all duration-300" style={{ opacity: entryOpacity, transform: `translateY(${entryTranslateY}px)` }}>
           <div className="w-full max-w-7xl mx-auto flex items-center gap-3">
             <span className="w-8 h-px bg-ochre" />
-            <span className="font-mono text-xs tracking-[0.3em] text-ochre uppercase font-medium">VOLUME NO. 04 / SANCTUARY OF DAYLIGHT</span>
+            <span className="font-mono text-xs tracking-[0.3em] text-ochre uppercase font-medium">VOLUME NO. 04 / LIVING SANCTUARY</span>
           </div>
 
           <div className="max-w-7xl mx-auto w-full my-auto space-y-6">
@@ -457,7 +487,7 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound }: { isMuted: boole
             <div className="space-y-1.5">
               <span className="font-mono text-xs font-medium text-ochre uppercase tracking-widest block">ATELIER SANCTUARY</span>
               <h2 className="font-serif text-2xl sm:text-3xl text-white font-normal tracking-tight">Crafted Without Compromise.</h2>
-              <p className="text-xs sm:text-sm font-sans text-white/70 max-w-md font-light leading-relaxed">The interior transition has reached full spatial stillness. Explore the collection below.</p>
+              <p className="text-xs sm:text-sm font-sans text-white/70 max-w-md font-light leading-relaxed">The transformation has reached full stillness. Explore the collection below.</p>
             </div>
             <div className="flex items-center gap-3">
               <a href="/work" className="px-6 py-3.5 rounded-full bg-ochre hover:bg-ochre-dark text-charcoal font-mono text-xs font-medium tracking-widest uppercase transition-all flex items-center gap-2">
@@ -518,11 +548,12 @@ not_found_handling = "single-page-application"
 ## 🛑 CHECKLIST: ZERO-ERROR VERIFICATION
 
 Before shipping any build, verify:
+- [x] **Universal 3D subject support**: Adaptive focal remapping formula handles any video geometry (products, cars, architecture, exploded CAD, macro zooms).
 - [x] **Full 1080p Lanczos clarity**: FFmpeg upscales with unsharp filter at `q:92`.
 - [x] **No blank initial screen**: Frame 1 paints synchronously on mount.
 - [x] **No mobile tap lag**: Chunked idle preloading via `requestIdleCallback` keeps main thread free.
 - [x] **No GPU fill-rate throttling**: DPR capped at 1.0 on mobile, `{ alpha: false, desynchronized: true }`.
-- [x] **No fast room jump**: Piecewise easing expands the crucial room transition across 40% of the active runway.
+- [x] **No sudden velocity spikes**: Cosine S-curve allocates 40%–60% of runway to primary focal transformations.
 - [x] **No steppy frame jumps**: Continuous damping lerp (`rAF`) provides liquid frame interpolation.
 - [x] **No AI shape clutter**: Clean editorial typography with zero emojis, stars, shields, or overlapping badges.
 - [x] **Multi-page routing**: Full Next.js App Router subpages with active nav indicators.
