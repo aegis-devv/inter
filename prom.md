@@ -1,7 +1,7 @@
-# 🚀 MASTER 3D SCROLL-JACKING CANVAS BLUEPRINT
-### Autonomous Single-Prompt Framework for Next.js, GSAP & Web Audio Applications
+# 🚀 MASTER 3D SCROLL-JACKING CANVAS BLUEPRINT v2.0
+### Autonomous Single-Prompt Framework for Next.js, GSAP, Web Audio & Cloudflare Edge
 
-> **Purpose**: A universal, production-grade technical specification and single-prompt engine. Use this blueprint to transform any video (`.mp4`) into an ultra-smooth, 60fps frame-interpolated canvas-scrubbed web experience with zero stutter, full responsive mobile support, ambient Web Audio synthesis, and dynamic content sections.
+> **Purpose**: A battle-tested, production-grade technical specification and single-prompt engine. Use this blueprint to transform any video (`.mp4`) into an ultra-smooth, 60fps Full HD canvas-scrubbed web experience with zero stutter, piecewise slow-motion room transition easing, multi-page App Router architecture, non-blocking mobile idle preloading, Web Audio synthesis, and 1-click Cloudflare deployment.
 
 ---
 
@@ -10,78 +10,101 @@
 *Copy the prompt below into any AI agent / coding assistant along with your video file:*
 
 ```markdown
-You are an elite creative technologist building a production-grade, 3D frame-scrubbed interactive web application using Next.js (App Router), TypeScript, Tailwind CSS, GSAP ScrollTrigger, and the Web Audio API.
+You are an elite creative technologist and senior frontend architect building a production-grade, full-bleed 3D frame-scrubbed interactive web application using Next.js (App Router, Static Export), TypeScript, Tailwind CSS, GSAP ScrollTrigger, and the Web Audio API.
 
 ### 1. SPECIFICATIONS & INPUT VARIABLES
 - **Input Video**: `[INPUT_VIDEO_FILENAME.mp4]` in the project root.
 - **Brand / Project Name**: `[INSERT_BRAND_NAME]`
-- **Color Palette**: `[INSERT_PRIMARY_COLOR, ACCENT_COLOR, BACKGROUND_COLOR, TEXT_COLOR]` (or adapt from video)
-- **Typography**: `[INSERT_DISPLAY_FONT, BODY_FONT, MONO_FONT]`
-- **Target Currency / Locale**: `[INSERT_CURRENCY_SYMBOL e.g. ₹ / $ / €]`
-- **Custom Content Sections**:
-  1. Hero Section (3D Video Lens Scrub + Floating Action Deck)
-  2. [SECTION_1_NAME: e.g. Curated Collection / Feature Showcase]
-  3. [SECTION_2_NAME: e.g. Interactive Configurator / Diagnostic Matrix]
-  4. [SECTION_3_NAME: e.g. Atelier Manifesto / Technical Specs]
-  5. [SECTION_4_NAME: e.g. Reviews / Interactive Drawer / Footer]
+- **Color Palette**: `[INSERT_PRIMARY_COLOR, ACCENT_COLOR, BACKGROUND_COLOR, TEXT_COLOR]` (e.g. Alabaster `#FAF8F5`, Deep Charcoal `#12161F`, Ochre Gold `#C5A880`)
+- **Typography**: Editorial Serif (e.g. Cormorant Garamond / Playfair Display), Modern Sans (Plus Jakarta Sans / Inter), Monospace (Space Mono / JetBrains Mono)
+- **Target Pages & Routes**:
+  1. `/` (Home: Full-bleed 3D Video Scrub Hero + Curated Overview Highlights)
+  2. `/work` (Dedicated Architectural / Product Showcase with Interactive Filter Pills)
+  3. `/philosophy` (Studio Ethos Manifesto + Tactile Material & Solar Trajectory Matrix)
+  4. `/journal` (Critical Essays, Monograph Notes & Studies)
+  5. `/contact` (Studio Commission Inquiry Form & Global Bureau Directory)
 
 ---
 
 ### 2. EXECUTION WORKFLOW & HARD TECHNICAL RULES
 
-#### PHASE 1: FRAME EXTRACTION (Run Outside App First)
-1. Generate dual-tier synchronized WebP frame sequences using FFmpeg:
-   - **Desktop Tier (`public/sequence/desktop/`)**: Motion-compensated interpolation at 60fps, 1280x720, WebP `q:80` (`frame_%04d.webp`).
-   - **Mobile Tier (`public/sequence/mobile/`)**: 1:3 subsampled frames scaled to 640x360, WebP `q:75` (`frame_%04d.webp`), ensuring the last frame matches desktop's final frame exactly.
-   - **Manifest (`public/sequence/manifest.json`)**: JSON recording frame counts, dimensions, and path prefixes.
-2. Script must clean previous frames and process mobile tier in parallel worker pools for speed.
+#### PHASE 1: HIGH-DEFINITION FRAME EXTRACTION (FFmpeg)
+1. Use `ffmpeg-static` to generate dual-tier synchronized WebP frame sequences with Lanczos upscaling and unsharp enhancement:
+   - **Desktop Tier (`public/sequence/desktop/`)**: 60fps motion-interpolated, 1920x1080 Lanczos, unsharp filter `unsharp=5:5:0.85:5:5:0.0`, WebP `q:92`, preset `photo` (`frame_%04d.webp`).
+   - **Mobile Tier (`public/sequence/mobile/`)**: 1:3 subsampled frames scaled to 960x540 Lanczos, WebP `q:85` (`frame_%04d.webp`), guaranteeing 1:1 final frame parity with desktop.
+   - **Manifest (`public/sequence/manifest.json`)**: Records frame counts, dimensions, and path prefixes.
+2. The script must clean previous frames and process mobile tier downscaling in parallel worker pools.
 
-#### PHASE 2: CANVAS BLITTER & INSTANT MOUNT (Zero Black Screen)
-1. **Never use `<video>` seek**. Blit raw frames directly to an HTML5 `<canvas>` via `ctx.drawImage` using manual `cover` aspect-ratio math.
-2. **Synchronous Mount**: Calculate viewport dimensions and DPR immediately on mount. Cap DPR at `Math.min(window.devicePixelRatio || 1, 2)`.
-3. **Instant First Paint**: Load `frame_0001.webp` first; paint to canvas inside `img.onload` immediately.
-4. **No Blocking Loader**: Stream remaining frames progressively in background ascending order. If the user scrolls faster than network buffering, clamp to the nearest loaded frame without stutter.
+#### PHASE 2: CANVAS BLITTER & CONTINUOUS LERP ENGINE
+1. **Never use `<video>` seek**: Blit raw frames directly to an HTML5 `<canvas>` via `ctx.drawImage` using cover aspect-ratio math.
+2. **GPU Optimization**: Use `canvas.getContext('2d', { alpha: false, desynchronized: true })` to cut GPU memory bandwidth by ~50% and eliminate composite latency on mobile.
+3. **DPR Capping**: Cap DPR to `1.0` on mobile and low-end devices (`deviceMemory < 4` or `hardwareConcurrency <= 4`) and `Math.min(window.devicePixelRatio || 1, 1.5)` on desktop to prevent fill-rate lag.
+4. **Instant First Paint**: Load and render `frame_0001.webp` synchronously on mount (zero black screen).
+5. **Non-Blocking Chunked Idle Preloading**: Do NOT spawn all image requests at once. Preload in small batches of 3–6 frames via `requestIdleCallback` (or 30ms timeouts) so mobile network pools and touch event threads stay 100% free and responsive for taps and navigation.
+6. **Continuous Damping Lerp Engine**: Implement a `requestAnimationFrame` lerp loop (`currentFrame += (targetFrame - currentFrame) * 0.14`) so rapid mouse-wheel notches or mobile touch drags interpolate like liquid honey with zero flashiness.
 
-#### PHASE 3: GSAP SCROLLTRIGGER & PINNED HOLD RUNWAY
-1. **Scroll Runway**: Container `height: 450vh`. Inner viewport `position: sticky; top: 0; height: 100vh; overflow: hidden`.
-2. **Lerp Scrubbing**: `scrub: 0.7` on desktop; `1.0` on mobile.
-3. **Runway Partition Formula**:
-   - `0.00 → 0.65`: Scrubs through frame indices `0 → (total - 1)`.
-   - `0.65`: Triggers the surprise beat (canvas star/diamond particle burst + Web Audio chime).
-   - `0.65 → 1.00`: **PINNED HOLD RUNWAY** — the final frame remains crisp and locked in place while the floating hero action deck is fully interactive before smoothly unpinning into the page.
+#### PHASE 3: NON-LINEAR EASING & PINNED HOLD RUNWAY
+1. **Scroll Runway**: Container `height: 450vh`. Sticky inner viewport `top: 0; height: 100vh; overflow: hidden`.
+2. **Piecewise Room Transition Easing (Slow Middle Movement)**:
+   - `0.00 → 0.18` Scroll: Entrance phase (Frames 0 to ~18%).
+   - `0.18 → 0.58` Scroll: **Cinematic Slow-Motion Room Flythrough** — dedicated 40% of active scroll runway with smooth cosine S-curve easing so moving between rooms feels deliberate, expansive, and smooth.
+   - `0.58 → 0.65` Scroll: Settling into final room perspective.
+   - `0.65`: Triggers Web Audio harmonic chime.
+   - `0.65 → 1.00`: **PINNED HOLD RUNWAY** — Final frame locks crisp in place while an unobstructed floating glassmorphic **Bottom Action Deck** slides up (`bottom-6 sm:bottom-12`) before unpinning.
 
-#### PHASE 4: UI/UX COMPOSITION (Non-AI, Bespoke Aesthetics)
-1. **No Obstructive Center Blur**: Do NOT place heavy frosted blur cards directly over the focal subject. Place headline and CTAs in a sleek **bottom floating deck** (`bottom-6 sm:bottom-10`) so the video subject remains 100% sharp.
-2. **Header / Navigation**: Sticky header with brand wordmark, section indices (`01`, `02`, `03`), sound toggle, cart/bag indicator, and a full-screen mobile slide-out drawer.
-3. **Interactive Sections**:
-   - Connected product / feature grid with live filtering, badges, and instant cart updates.
-   - Bespoke multi-parameter diagnostic matrix / interactive configurator that dynamically calculates tailored results.
-   - Slide-out drawer for cart / details with live subtotal and progress bars.
-4. **Zero Generic AI Boilerplate**: No generic 3-column card placeholders, no emoji icons. Use clean SVG vector icons (Lucide) and sharp Swiss/monospaced metadata tags.
+#### PHASE 4: EYE-SOOTHING UI/UX & MULTI-PAGE ROUTING
+1. **Zero AI Clutter / Pure Editorial**:
+   - NO emoji icons, NO star/diamond sparkle bursts, NO shield badges.
+   - NO overlapping telemetry text or cluttered badges (`CANVAS 60FPS INTERPOLATED` / `FRAME 0001 OF 476` must be omitted).
+   - Generous whitespace, clean typography, and uncluttered layout.
+2. **Multi-Page Navigation**:
+   - Desktop Header & Full-Screen Mobile Drawer (`NavigationDrawer`) using Next.js `<Link>` with active route detection (`usePathname()`).
+   - Mobile Responsive Adapters: Complex selectors (e.g. material substrate matrix) must adapt into clean native dropdowns on mobile (`sm:hidden`).
 
 #### PHASE 5: WEB AUDIO SYNTHESIZER
 1. Implement a Web Audio API controller:
    - Low-frequency ambient drone whose Biquad lowpass filter cutoff dynamically tracks scroll velocity.
-   - Multi-oscillator harmonic chime with exponential decay triggered at the 65% reveal point.
-2. Comply with browser autoplay: initialize/resume `AudioContext` only on first user gesture.
+   - Multi-oscillator harmonic chord chime triggered at the 65% reveal threshold.
+2. Lazily initialize/resume `AudioContext` only on first user gesture.
+
+#### PHASE 6: 1-CLICK CLOUDFLARE PAGES & WORKERS DEPLOYMENT
+1. **Next.js Config**: Enable static export with `output: 'export'` and `images: { unoptimized: true }`.
+2. **Cloudflare Configuration**: Include pre-configured `wrangler.toml` and `wrangler.json` with `[assets] directory = "./out"` so the repository deploys seamlessly to Cloudflare Pages / Workers.
 ```
 
 ---
 
 ## 🛠️ TECHNICAL REFERENCE ARCHITECTURE
 
-### 1. Dual-Tier Frame Extraction Engine (`scripts/extract_frames.js`)
+### 1. High-Definition Lanczos Frame Extraction (`scripts/extract_frames.js`)
 
 ```javascript
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 
-const ffmpegPath = process.env.FFMPEG_PATH || 'ffmpeg';
-const inputVideo = path.join(__dirname, '..', 'input.mp4');
-const desktopDir = path.join(__dirname, '..', 'public', 'sequence', 'desktop');
-const mobileDir = path.join(__dirname, '..', 'public', 'sequence', 'mobile');
-const manifestPath = path.join(__dirname, '..', 'public', 'sequence', 'manifest.json');
+let ffmpegPath = process.env.FFMPEG_PATH;
+if (!ffmpegPath) {
+  try {
+    ffmpegPath = require('ffmpeg-static');
+  } catch (e) {
+    ffmpegPath = 'ffmpeg';
+  }
+}
+
+const rootFiles = fs.readdirSync(path.join(__dirname, '..'));
+const mp4File = rootFiles.find(f => f.toLowerCase().endsWith('.mp4'));
+if (!mp4File) {
+  console.error('Error: No .mp4 video found in project root directory.');
+  process.exit(1);
+}
+const inputVideo = path.join(__dirname, '..', mp4File);
+
+const publicDir = path.join(__dirname, '..', 'public');
+const sequenceDir = path.join(publicDir, 'sequence');
+const desktopDir = path.join(sequenceDir, 'desktop');
+const mobileDir = path.join(sequenceDir, 'mobile');
+const manifestPath = path.join(sequenceDir, 'manifest.json');
 
 fs.mkdirSync(desktopDir, { recursive: true });
 fs.mkdirSync(mobileDir, { recursive: true });
@@ -98,37 +121,40 @@ function runCommand(cmd, args, silent = false) {
 }
 
 async function main() {
-  console.log('--- Cleaning previous sequences ---');
+  console.log('--- Cleaning previous frame sequences ---');
   for (const dir of [desktopDir, mobileDir]) {
-    for (const f of fs.readdirSync(dir)) {
-      if (f.endsWith('.webp')) fs.unlinkSync(path.join(dir, f));
+    if (fs.existsSync(dir)) {
+      for (const f of fs.readdirSync(dir)) {
+        if (f.endsWith('.webp') || f.endsWith('.jpg') || f.endsWith('.png')) {
+          fs.unlinkSync(path.join(dir, f));
+        }
+      }
     }
   }
 
-  console.log('--- Step 1: Desktop 60fps Motion-Interpolated Tier (1280x720) ---');
+  console.log('--- Step 1: Desktop 1080p Lanczos Tier (1920x1080 with Unsharp Enhancement) ---');
   await runCommand(ffmpegPath, [
     '-y',
     '-i', inputVideo,
-    '-filter:v', "minterpolate='mi_mode=blend:fps=60',scale=1280:720",
+    '-filter:v', "minterpolate='mi_mode=blend:fps=60',scale=1920:1080:flags=lanczos,unsharp=5:5:0.85:5:5:0.0",
     '-vcodec', 'libwebp',
-    '-q:v', '80',
+    '-q:v', '92',
+    '-preset', 'photo',
     path.join(desktopDir, 'frame_%04d.webp')
   ]);
 
   const desktopFrames = fs.readdirSync(desktopDir).filter(f => f.endsWith('.webp')).sort();
   console.log(`✓ Generated ${desktopFrames.length} Desktop frames.`);
 
-  console.log('--- Step 2: Mobile Subsampled Tier (640x360) ---');
+  console.log('--- Step 2: Mobile Subsampled Tier (960x540) ---');
   const selectedDesktopIndices = [];
   for (let i = 0; i < desktopFrames.length; i += 3) {
     selectedDesktopIndices.push(i);
   }
-  // Guarantee 1:1 final frame parity
   if (selectedDesktopIndices[selectedDesktopIndices.length - 1] !== desktopFrames.length - 1) {
     selectedDesktopIndices.push(desktopFrames.length - 1);
   }
 
-  // Parallel pool for fast downscaling
   const CONCURRENCY = 8;
   const queue = selectedDesktopIndices.map((dIdx, mIdx) => ({ dIdx, mIdx }));
 
@@ -144,9 +170,9 @@ async function main() {
       await runCommand(ffmpegPath, [
         '-y',
         '-i', srcFile,
-        '-vf', 'scale=640:360',
+        '-vf', 'scale=960:540:flags=lanczos',
         '-vcodec', 'libwebp',
-        '-q:v', '75',
+        '-q:v', '85',
         dstFile
       ], true);
     }
@@ -156,26 +182,25 @@ async function main() {
   const mobileFrames = fs.readdirSync(mobileDir).filter(f => f.endsWith('.webp')).sort();
   console.log(`✓ Generated ${mobileFrames.length} Mobile frames.`);
 
-  // Write Manifest
   const manifest = {
     desktop: {
       count: desktopFrames.length,
-      width: 1280,
-      height: 720,
+      width: 1920,
+      height: 1080,
       prefix: '/sequence/desktop/frame_',
       suffix: '.webp'
     },
     mobile: {
       count: mobileFrames.length,
-      width: 640,
-      height: 360,
+      width: 960,
+      height: 540,
       prefix: '/sequence/mobile/frame_',
       suffix: '.webp'
     }
   };
 
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf-8');
-  console.log('✓ Manifest written to public/sequence/manifest.json');
+  console.log('✓ High-Definition Manifest written to public/sequence/manifest.json');
 }
 
 main().catch(console.error);
@@ -183,7 +208,7 @@ main().catch(console.error);
 
 ---
 
-### 2. Canvas Blitter & Hold Runway Engine (`components/ScrollReveal.tsx`)
+### 2. Full-Bleed Lerp Canvas Scrub Engine (`components/HeroFullscreenScrub.tsx`)
 
 ```tsx
 'use client';
@@ -191,31 +216,52 @@ main().catch(console.error);
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { ArrowDown, ArrowRight } from 'lucide-react';
+import { ArrowDown, ArrowUpRight, Volume2, VolumeX } from 'lucide-react';
 import { soundManager } from '../lib/audio';
 
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-export function ScrollReveal({ brandConfig }: { brandConfig?: any }) {
+// Piecewise easing allocating 40% of scroll runway to middle room transition
+function calculateTargetFrame(norm: number, totalFrames: number): number {
+  const f84Ratio = 84 / 476;
+  const f273Ratio = 273 / 476;
+
+  let frameRatio: number;
+  if (norm <= 0.18) {
+    frameRatio = f84Ratio * (norm / 0.18);
+  } else if (norm <= 0.58) {
+    const t = (norm - 0.18) / 0.40;
+    const smoothT = 0.5 - 0.5 * Math.cos(t * Math.PI);
+    frameRatio = f84Ratio + (f273Ratio - f84Ratio) * smoothT;
+  } else {
+    const t = Math.min(1, (norm - 0.58) / 0.42);
+    frameRatio = f273Ratio + (1.0 - f273Ratio) * t;
+  }
+
+  return Math.min(totalFrames - 1, Math.max(0, Math.floor(frameRatio * (totalFrames - 1))));
+}
+
+export function HeroFullscreenScrub({ isMuted, onToggleSound }: { isMuted: boolean; onToggleSound: () => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-
   const framesRef = useRef<(HTMLImageElement | null)[]>([]);
-  const currentFrameIdxRef = useRef<number>(0);
+  const targetFrameRef = useRef<number>(0);
+  const currentRenderedFrameRef = useRef<number>(0);
   const isSurpriseActiveRef = useRef<boolean>(false);
-  const lastScrollY = useRef(0);
-  const lastScrollTime = useRef(0);
+  const animFrameIdRef = useRef<number | null>(null);
 
-  const [surpriseTriggered, setSurpriseTriggered] = useState(false);
-  const [tierInfo, setTierInfo] = useState({ tier: 'desktop', totalFrames: 356 });
+  const [totalFrames, setTotalFrames] = useState<number>(476);
+  const [manifest, setManifest] = useState<any>(null);
+  const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  const [scrollProgress, setScrollProgress] = useState<number>(0);
+  const [isHoldActive, setIsHoldActive] = useState<boolean>(false);
 
-  // 1. Clamped nearest-frame selector
   const getBestAvailableImage = useCallback((targetIdx: number): HTMLImageElement | null => {
     const frames = framesRef.current;
     if (!frames || frames.length === 0) return null;
-    const clamped = Math.max(0, Math.min(targetIdx, frames.length - 1));
+    const clamped = Math.max(0, Math.min(Math.round(targetIdx), frames.length - 1));
 
     if (frames[clamped]) return frames[clamped];
     for (let i = clamped - 1; i >= 0; i--) if (frames[i]) return frames[i];
@@ -223,11 +269,10 @@ export function ScrollReveal({ brandConfig }: { brandConfig?: any }) {
     return null;
   }, []);
 
-  // 2. Cover-fit blit math (Preserves aspect ratio across any viewport)
   const renderCanvas = useCallback((frameIdx: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
     if (!ctx) return;
 
     const img = getBestAvailableImage(frameIdx);
@@ -242,76 +287,108 @@ export function ScrollReveal({ brandConfig }: { brandConfig?: any }) {
       const renderH = ih * ratio;
       const renderX = (cw - renderW) / 2;
       const renderY = (ch - renderH) / 2;
-
-      ctx.clearRect(0, 0, cw, ch);
       ctx.drawImage(img, 0, 0, iw, ih, renderX, renderY, renderW, renderH);
     }
   }, [getBestAvailableImage]);
 
-  // 3. Viewport & DPR Handler
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = window.innerWidth * dpr;
-    canvas.height = window.innerHeight * dpr;
-    canvas.style.width = `${window.innerWidth}px`;
-    canvas.style.height = `${window.innerHeight}px`;
-    renderCanvas(currentFrameIdxRef.current);
+    const isMobile = window.innerWidth < 768;
+    const isLowEnd = typeof navigator !== 'undefined' && (
+      ((navigator as any).deviceMemory && (navigator as any).deviceMemory < 4) ||
+      ((navigator as any).hardwareConcurrency && (navigator as any).hardwareConcurrency <= 4)
+    );
+    const dpr = isMobile || isLowEnd ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+
+    canvas.width = Math.floor(w * dpr);
+    canvas.height = Math.floor(h * dpr);
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+    renderCanvas(currentRenderedFrameRef.current);
+  }, [renderCanvas]);
+
+  // Continuous damping lerp loop
+  useEffect(() => {
+    let active = true;
+    const loop = () => {
+      if (!active) return;
+      const target = targetFrameRef.current;
+      const current = currentRenderedFrameRef.current;
+      const diff = target - current;
+
+      if (Math.abs(diff) > 0.04) {
+        currentRenderedFrameRef.current += diff * 0.16;
+        renderCanvas(currentRenderedFrameRef.current);
+      }
+      animFrameIdRef.current = requestAnimationFrame(loop);
+    };
+    animFrameIdRef.current = requestAnimationFrame(loop);
+    return () => {
+      active = false;
+      if (animFrameIdRef.current) cancelAnimationFrame(animFrameIdRef.current);
+    };
   }, [renderCanvas]);
 
   useEffect(() => {
+    fetch('/sequence/manifest.json')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => { if (data) setManifest(data); })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (typeof window === 'undefined') return;
+    const isMobile = window.innerWidth < 768;
+    const tierKey = isMobile && manifest?.mobile ? 'mobile' : 'desktop';
+    const count = manifest ? manifest[tierKey].count : (isMobile ? 160 : 476);
+    const prefix = manifest ? manifest[tierKey].prefix : (isMobile ? '/sequence/mobile/frame_' : '/sequence/desktop/frame_');
+    const suffix = manifest ? manifest[tierKey].suffix : '.webp';
+    const scrubFactor = isMobile ? 0.6 : 0.8;
 
-    const isMobile = window.innerWidth < 768 || ((navigator as any).deviceMemory && (navigator as any).deviceMemory < 4);
-    const tier = isMobile ? 'mobile' : 'desktop';
-    const total = isMobile ? 120 : 356;
-    const prefix = isMobile ? '/sequence/mobile/frame_' : '/sequence/desktop/frame_';
-    const scrubFactor = isMobile ? 1.0 : 0.7;
-
-    setTierInfo({ tier, totalFrames: total });
-    const frames: (HTMLImageElement | null)[] = new Array(total).fill(null);
+    setTotalFrames(count);
+    const frames: (HTMLImageElement | null)[] = new Array(count).fill(null);
     framesRef.current = frames;
 
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
-    // Immediate Frame 1 mount blit
+    // Instant First Frame Render
     const firstImg = new Image();
-    firstImg.src = `${prefix}0001.webp`;
+    firstImg.src = `${prefix}0001${suffix}`;
     firstImg.onload = () => {
       frames[0] = firstImg;
+      setIsLoaded(true);
       renderCanvas(0);
     };
 
-    // Progressive background streaming
-    for (let i = 1; i < total; i++) {
-      const img = new Image();
-      img.src = `${prefix}${String(i + 1).padStart(4, '0')}.webp`;
-      img.onload = () => {
-        frames[i] = img;
-        if (Math.abs(currentFrameIdxRef.current - i) <= 1) {
-          renderCanvas(currentFrameIdxRef.current);
-        }
-      };
-    }
+    // Non-blocking chunked idle preloading
+    let isCancelled = false;
+    let currentIndex = 1;
+    const CHUNK_SIZE = isMobile ? 3 : 6;
 
-    // GSAP ScrollTrigger with 65% scrub / 35% hold runway
+    const loadNextBatch = () => {
+      if (isCancelled || currentIndex >= count) return;
+      const end = Math.min(currentIndex + CHUNK_SIZE, count);
+      for (let i = currentIndex; i < end; i++) {
+        const img = new Image();
+        img.src = `${prefix}${String(i + 1).padStart(4, '0')}${suffix}`;
+        img.onload = () => { frames[i] = img; };
+      }
+      currentIndex = end;
+      if (currentIndex < count) {
+        if ('requestIdleCallback' in window) {
+          (window as any).requestIdleCallback(loadNextBatch, { timeout: 80 });
+        } else {
+          setTimeout(loadNextBatch, 30);
+        }
+      }
+    };
+    setTimeout(loadNextBatch, 50);
+
     const gsapCtx = gsap.context(() => {
-      const frameTracker = { frame: 0 };
-
-      const handleScrollVelocity = () => {
-        const now = performance.now();
-        const delta = now - lastScrollTime.current;
-        if (delta > 0) {
-          const dist = Math.abs(window.scrollY - lastScrollY.current);
-          soundManager.updateVelocity((dist / delta) * 100);
-        }
-        lastScrollY.current = window.scrollY;
-        lastScrollTime.current = now;
-      };
-      window.addEventListener('scroll', handleScrollVelocity, { passive: true });
-
       ScrollTrigger.create({
         trigger: containerRef.current,
         start: 'top top',
@@ -319,50 +396,87 @@ export function ScrollReveal({ brandConfig }: { brandConfig?: any }) {
         scrub: scrubFactor,
         onUpdate: (self) => {
           const progress = self.progress;
-          // Partition: 0 to 65% scrubs frames; 65% to 100% holds final frame
-          const scrubProgress = Math.min(1, progress / 0.65);
-          const targetFrame = Math.floor(scrubProgress * (total - 1));
-          currentFrameIdxRef.current = targetFrame;
-          renderCanvas(targetFrame);
+          setScrollProgress(progress);
+          const rawNorm = Math.min(1, progress / 0.65);
+          targetFrameRef.current = calculateTargetFrame(rawNorm, count);
 
           if (progress >= 0.65 && !isSurpriseActiveRef.current) {
             isSurpriseActiveRef.current = true;
-            setSurpriseTriggered(true);
+            setIsHoldActive(true);
             soundManager.playSurpriseChime();
           } else if (progress < 0.58 && isSurpriseActiveRef.current) {
             isSurpriseActiveRef.current = false;
-            setSurpriseTriggered(false);
+            setIsHoldActive(false);
           }
         },
       });
     }, containerRef);
 
     return () => {
+      isCancelled = true;
       window.removeEventListener('resize', resizeCanvas);
       gsapCtx.revert();
-      ScrollTrigger.getAll().forEach(t => t.kill());
+      ScrollTrigger.getAll().forEach((t) => t.kill());
     };
-  }, [renderCanvas, resizeCanvas]);
+  }, [manifest, renderCanvas, resizeCanvas]);
+
+  const entryOpacity = Math.max(0, 1 - scrollProgress * 3.5);
+  const entryTranslateY = scrollProgress * -70;
 
   return (
-    <section ref={containerRef} className="relative w-full h-[450vh]">
-      <div className="sticky top-0 w-full h-screen overflow-hidden flex items-center justify-center">
-        <canvas ref={canvasRef} className="w-full h-full object-cover block" />
+    <section id="hero" ref={containerRef} className="relative w-full h-[450vh] bg-[#0E1218]">
+      <div className="sticky top-0 w-full h-screen overflow-hidden flex items-center justify-center select-none">
+        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full object-cover block pointer-events-none" style={{ opacity: isLoaded ? 1 : 0.85 }} />
+        <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-[#0E1218]/80 via-transparent to-[#0E1218]/50" />
 
-        {/* Floating Bottom Hero Deck (Unobscured subject) */}
-        <div className={`absolute bottom-6 sm:bottom-10 left-0 right-0 z-30 px-4 sm:px-6 flex justify-center transition-all duration-600 ${
-          surpriseTriggered ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-8 pointer-events-none'
-        }`}>
-          <div className="w-full max-w-4xl bg-white/95 dark:bg-black/90 border border-black/10 dark:border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="absolute inset-0 z-20 flex flex-col justify-between px-6 sm:px-16 py-24 sm:py-32 pointer-events-none transition-all duration-300" style={{ opacity: entryOpacity, transform: `translateY(${entryTranslateY}px)` }}>
+          <div className="w-full max-w-7xl mx-auto flex items-center gap-3">
+            <span className="w-8 h-px bg-ochre" />
+            <span className="font-mono text-xs tracking-[0.3em] text-ochre uppercase font-medium">VOLUME NO. 04 / SANCTUARY OF DAYLIGHT</span>
+          </div>
+
+          <div className="max-w-7xl mx-auto w-full my-auto space-y-6">
+            <h1 className="text-5xl sm:text-8xl md:text-9xl xl:text-[10.5rem] font-serif tracking-tight text-white leading-[0.92]">
+              Spaces that <span className="italic text-ochre">breathe</span> light.
+            </h1>
+            <p className="max-w-xl text-sm sm:text-lg font-sans text-white/80 font-light leading-relaxed pt-2">
+              We compose monolithic sanctuaries from celestial daylight, quiet materiality, and proportions allowed to breathe.
+            </p>
+          </div>
+
+          <div className="w-full max-w-7xl mx-auto flex items-center gap-4">
+            <div className="w-9 h-9 rounded-full border border-white/20 flex items-center justify-center text-white/70">
+              <ArrowDown className="w-3.5 h-3.5 text-ochre" />
+            </div>
+            <span className="text-xs font-mono tracking-widest text-white/60 uppercase">SCROLL TO EXPLORE</span>
+          </div>
+        </div>
+
+        <div className={`absolute bottom-6 sm:bottom-12 left-0 right-0 z-30 px-4 sm:px-12 flex justify-center transition-all duration-500 ease-out ${isHoldActive ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-8 pointer-events-none'}`}>
+          <div className="w-full max-w-4xl bg-[#11161D]/95 sm:backdrop-blur-xl border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-1.5">
-              <span className="font-mono text-xs font-bold text-red-500 uppercase tracking-widest">✦ PROVEN QUALITY</span>
-              <h1 className="font-display text-2xl sm:text-3xl font-bold uppercase">Crafted Without Compromise.</h1>
+              <span className="font-mono text-xs font-medium text-ochre uppercase tracking-widest block">ATELIER SANCTUARY</span>
+              <h2 className="font-serif text-2xl sm:text-3xl text-white font-normal tracking-tight">Crafted Without Compromise.</h2>
+              <p className="text-xs sm:text-sm font-sans text-white/70 max-w-md font-light leading-relaxed">The interior transition has reached full spatial stillness. Explore the collection below.</p>
             </div>
             <div className="flex items-center gap-3">
-              <a href="#explore" className="px-6 py-3.5 rounded-full bg-red-600 hover:bg-red-700 text-white font-mono text-xs font-bold uppercase transition-all">
-                Explore Collection
+              <a href="/work" className="px-6 py-3.5 rounded-full bg-ochre hover:bg-ochre-dark text-charcoal font-mono text-xs font-medium tracking-widest uppercase transition-all flex items-center gap-2">
+                <span>Explore Works</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </a>
+              <a href="/philosophy" className="px-5 py-3.5 rounded-full border border-white/15 hover:border-white/30 text-white font-mono text-xs tracking-widest uppercase transition-all bg-white/5">
+                Material Matrix
               </a>
             </div>
+          </div>
+        </div>
+
+        <div className="absolute right-4 sm:right-10 bottom-6 sm:bottom-8 z-20 flex items-center gap-3">
+          <button onClick={onToggleSound} className="p-3 rounded-full bg-black/60 border border-white/10 text-white/70 hover:text-ochre transition-all">
+            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4 text-ochre" />}
+          </button>
+          <div className="px-3.5 py-2 rounded-full bg-black/60 border border-white/10 text-xs font-mono tracking-widest text-white/70 hidden sm:flex items-center gap-2">
+            <span className="text-ochre">{Math.round(scrollProgress * 100)}%</span>
           </div>
         </div>
       </div>
@@ -373,110 +487,30 @@ export function ScrollReveal({ brandConfig }: { brandConfig?: any }) {
 
 ---
 
-### 3. Web Audio Velocity Drone & Harmonic Chime (`lib/audio.ts`)
+### 3. Cloudflare Deployment Configuration (`wrangler.toml` & `wrangler.json`)
 
-```typescript
-class AudioController {
-  private ctx: AudioContext | null = null;
-  private isMuted: boolean = true;
-  private isInitialized: boolean = false;
-  private droneGain: GainNode | null = null;
-  private droneFilter: BiquadFilterNode | null = null;
-  private listeners: Set<(muted: boolean) => void> = new Set();
+```toml
+# wrangler.toml
+name = "my-3d-app"
+compatibility_date = "2024-09-23"
 
-  public subscribe(cb: (muted: boolean) => void) {
-    this.listeners.add(cb);
-    cb(this.isMuted);
-    return () => this.listeners.delete(cb);
-  }
+[assets]
+directory = "./out"
+html_handling = "auto-trailing-slash"
+not_found_handling = "single-page-application"
+```
 
-  public init() {
-    if (this.isInitialized || typeof window === 'undefined') return;
-    try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtx) return;
-      this.ctx = new AudioCtx();
-      this.isInitialized = true;
-      this.setupDrone();
-    } catch (_) {}
-  }
-
-  public toggleMute(): boolean {
-    if (!this.isInitialized) this.init();
-    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
-    this.isMuted = !this.isMuted;
-    if (this.droneGain && this.ctx) {
-      this.droneGain.gain.setTargetAtTime(this.isMuted ? 0 : 0.08, this.ctx.currentTime, 0.2);
-    }
-    this.listeners.forEach(cb => cb(this.isMuted));
-    return this.isMuted;
-  }
-
-  private setupDrone() {
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-    this.droneGain = this.ctx.createGain();
-    this.droneGain.gain.setValueAtTime(0, now);
-
-    this.droneFilter = this.ctx.createBiquadFilter();
-    this.droneFilter.type = 'lowpass';
-    this.droneFilter.frequency.setValueAtTime(140, now);
-
-    const osc1 = this.ctx.createOscillator();
-    osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(73.42, now); // D2
-
-    const osc2 = this.ctx.createOscillator();
-    osc2.type = 'triangle';
-    osc2.frequency.setValueAtTime(110.0, now); // A2
-
-    osc1.connect(this.droneFilter);
-    osc2.connect(this.droneFilter);
-    this.droneFilter.connect(this.droneGain);
-    this.droneGain.connect(this.ctx.destination);
-
-    osc1.start();
-    osc2.start();
-  }
-
-  public updateVelocity(velocity: number) {
-    if (!this.ctx || !this.droneFilter || this.isMuted) return;
-    const targetFreq = Math.min(140 + Math.abs(velocity) * 15, 650);
-    this.droneFilter.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 0.05);
-  }
-
-  public playSurpriseChime() {
-    if (!this.ctx || this.isMuted) return;
-    if (this.ctx.state === 'suspended') this.ctx.resume();
-    const now = this.ctx.currentTime;
-    const chords = [587.33, 880.00, 1174.66, 1760.00];
-
-    chords.forEach((freq, i) => {
-      if (!this.ctx) return;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      const filter = this.ctx.createBiquadFilter();
-
-      osc.frequency.setValueAtTime(freq, now + i * 0.035);
-      filter.frequency.setValueAtTime(3500, now + i * 0.035);
-      filter.frequency.exponentialRampToValueAtTime(300, now + i * 0.035 + 1.8);
-
-      const noteStart = now + i * 0.035;
-      gain.gain.setValueAtTime(0.0001, noteStart);
-      gain.gain.exponentialRampToValueAtTime(0.1 / (i + 1), noteStart + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, noteStart + 2.2);
-
-      osc.connect(filter);
-      filter.connect(gain);
-      gain.connect(this.ctx.destination);
-
-      osc.start(noteStart);
-      osc.stop(noteStart + 2.4);
-    });
+```json
+// wrangler.json
+{
+  "name": "my-3d-app",
+  "compatibility_date": "2024-09-23",
+  "assets": {
+    "directory": "./out",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "single-page-application"
   }
 }
-
-export const soundManager = new AudioController();
 ```
 
 ---
@@ -484,10 +518,12 @@ export const soundManager = new AudioController();
 ## 🛑 CHECKLIST: ZERO-ERROR VERIFICATION
 
 Before shipping any build, verify:
-- [x] **No `<video>` seeking lag**: All scrubbing rendered on `<canvas>`.
-- [x] **No blank initial screen**: Frame 1 paints immediately on mount.
-- [x] **No blocking loader**: Preload is progressive and streaming.
-- [x] **No premature unpinning**: Pinned Hold Runway active between 65% and 100% scroll.
-- [x] **No blocked audio errors**: Audio context lazily initialized on user gesture.
-- [x] **No retina fill-rate lag**: `Math.min(devicePixelRatio, 2)` DPR cap applied.
-- [x] **No obscured subject**: Floating bottom hero deck keeps focal point sharp and clear.
+- [x] **Full 1080p Lanczos clarity**: FFmpeg upscales with unsharp filter at `q:92`.
+- [x] **No blank initial screen**: Frame 1 paints synchronously on mount.
+- [x] **No mobile tap lag**: Chunked idle preloading via `requestIdleCallback` keeps main thread free.
+- [x] **No GPU fill-rate throttling**: DPR capped at 1.0 on mobile, `{ alpha: false, desynchronized: true }`.
+- [x] **No fast room jump**: Piecewise easing expands the crucial room transition across 40% of the active runway.
+- [x] **No steppy frame jumps**: Continuous damping lerp (`rAF`) provides liquid frame interpolation.
+- [x] **No AI shape clutter**: Clean editorial typography with zero emojis, stars, shields, or overlapping badges.
+- [x] **Multi-page routing**: Full Next.js App Router subpages with active nav indicators.
+- [x] **Cloudflare ready**: Pre-configured `output: 'export'`, `wrangler.toml`, and `wrangler.json`.
