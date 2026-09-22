@@ -1,0 +1,16 @@
+{
+  "desktop": {
+    "count": 476,
+    "width": 1920,
+    "height": 1080,
+    "prefix": "/sequence/desktop/frame_",
+    "suffix": ".webp"
+  },
+  "mobile": {
+    "count": 160,
+    "width": 960,
+    "height": 540,
+    "prefix": "/sequence/mobile/frame_",
+    "suffix": ".webp"
+  }
+}
