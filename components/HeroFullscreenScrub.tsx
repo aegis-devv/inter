@@ -26,31 +26,10 @@ interface Manifest {
 interface HeroFullscreenScrubProps {
   isMuted: boolean;
   onToggleSound: () => void;
+  onTransitionStateChange?: (isTransitioning: boolean) => void;
 }
 
-// Ultra-smooth piecewise frame mapping with extended runway for frames 84-273
-function calculateTargetFrame(norm: number, totalFrames: number): number {
-  const f84Ratio = 84 / 476;
-  const f273Ratio = 273 / 476;
-
-  let frameRatio: number;
-
-  if (norm <= 0.18) {
-    const t = norm / 0.18;
-    frameRatio = f84Ratio * t;
-  } else if (norm <= 0.58) {
-    const t = (norm - 0.18) / 0.40;
-    const smoothT = 0.5 - 0.5 * Math.cos(t * Math.PI);
-    frameRatio = f84Ratio + (f273Ratio - f84Ratio) * smoothT;
-  } else {
-    const t = Math.min(1, (norm - 0.58) / 0.42);
-    frameRatio = f273Ratio + (1.0 - f273Ratio) * t;
-  }
-
-  return Math.min(totalFrames - 1, Math.max(0, Math.floor(frameRatio * (totalFrames - 1))));
-}
-
-export function HeroFullscreenScrub({ isMuted, onToggleSound }: HeroFullscreenScrubProps) {
+export function HeroFullscreenScrub({ isMuted, onToggleSound, onTransitionStateChange }: HeroFullscreenScrubProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -75,12 +54,15 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound }: HeroFullscreenSc
     const clamped = Math.max(0, Math.min(Math.round(targetIdx), frames.length - 1));
 
     if (frames[clamped]) return frames[clamped];
-    for (let i = clamped - 1; i >= 0; i--) if (frames[i]) return frames[i];
-    for (let i = clamped + 1; i < frames.length; i++) if (frames[i]) return frames[i];
-    return null;
+    // Search nearest loaded frame
+    for (let offset = 1; offset < frames.length; offset++) {
+      if (clamped - offset >= 0 && frames[clamped - offset]) return frames[clamped - offset];
+      if (clamped + offset < frames.length && frames[clamped + offset]) return frames[clamped + offset];
+    }
+    return frames[0] || null;
   }, []);
 
-  // 2. Full-bleed canvas blitter optimized for low GPU overhead
+  // 2. Full-bleed canvas blitter
   const renderCanvas = useCallback((frameIdx: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -115,7 +97,6 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound }: HeroFullscreenSc
       ((navigator as any).hardwareConcurrency && (navigator as any).hardwareConcurrency <= 4)
     );
 
-    // Capping DPR to 1 on mobile/low-end prevents GPU fill-rate throttling
     const dpr = isMobile || isLowEnd ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
     const w = window.innerWidth;
     const h = window.innerHeight;
@@ -139,9 +120,12 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound }: HeroFullscreenSc
       const current = currentRenderedFrameRef.current;
       const diff = target - current;
 
-      if (Math.abs(diff) > 0.04) {
-        currentRenderedFrameRef.current += diff * 0.16;
+      if (Math.abs(diff) > 0.02) {
+        currentRenderedFrameRef.current += diff * 0.25;
         renderCanvas(currentRenderedFrameRef.current);
+      } else if (current !== target) {
+        currentRenderedFrameRef.current = target;
+        renderCanvas(target);
       }
 
       animFrameIdRef.current = requestAnimationFrame(loop);
@@ -174,7 +158,6 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound }: HeroFullscreenSc
     const count = manifest ? manifest[tierKey].count : (isMobile ? 160 : 476);
     const prefix = manifest ? manifest[tierKey].prefix : (isMobile ? '/sequence/mobile/frame_' : '/sequence/desktop/frame_');
     const suffix = manifest ? manifest[tierKey].suffix : '.webp';
-    const scrubFactor = isMobile ? 0.6 : 0.8;
 
     setTotalFrames(count);
     const frames: (HTMLImageElement | null)[] = new Array(count).fill(null);
@@ -183,7 +166,7 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound }: HeroFullscreenSc
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
-    // Instant First Frame Render on Mount
+    // 1. Instant First Frame Render
     const firstImg = new Image();
     firstImg.src = `${prefix}0001${suffix}`;
     firstImg.onload = () => {
@@ -192,35 +175,46 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound }: HeroFullscreenSc
       renderCanvas(0);
     };
 
-    // Non-blocking chunked preloader (Prevents network and main thread freeze on mobile taps)
+    // 2. Preload Last 30 Frames Immediately (Guarantees final table frame is always in memory)
+    const endStart = Math.max(1, count - 30);
+    for (let i = endStart; i < count; i++) {
+      const img = new Image();
+      img.src = `${prefix}${String(i + 1).padStart(4, '0')}${suffix}`;
+      img.onload = () => {
+        frames[i] = img;
+      };
+    }
+
+    // 3. Progressive preloader for all intermediate frames
     let isCancelled = false;
     let currentIndex = 1;
-    const CHUNK_SIZE = isMobile ? 3 : 6;
+    const CHUNK_SIZE = isMobile ? 6 : 12;
 
     const loadNextBatch = () => {
-      if (isCancelled || currentIndex >= count) return;
+      if (isCancelled || currentIndex >= endStart) return;
 
-      const end = Math.min(currentIndex + CHUNK_SIZE, count);
+      const end = Math.min(currentIndex + CHUNK_SIZE, endStart);
       for (let i = currentIndex; i < end; i++) {
-        const img = new Image();
-        img.src = `${prefix}${String(i + 1).padStart(4, '0')}${suffix}`;
-        img.onload = () => {
-          frames[i] = img;
-        };
+        if (!frames[i]) {
+          const img = new Image();
+          img.src = `${prefix}${String(i + 1).padStart(4, '0')}${suffix}`;
+          img.onload = () => {
+            frames[i] = img;
+          };
+        }
       }
       currentIndex = end;
 
-      if (currentIndex < count) {
+      if (currentIndex < endStart) {
         if ('requestIdleCallback' in window) {
-          (window as any).requestIdleCallback(loadNextBatch, { timeout: 80 });
+          (window as any).requestIdleCallback(loadNextBatch, { timeout: 60 });
         } else {
-          setTimeout(loadNextBatch, 30);
+          setTimeout(loadNextBatch, 20);
         }
       }
     };
 
-    // Start streaming after initial frame paints
-    setTimeout(loadNextBatch, 50);
+    setTimeout(loadNextBatch, 30);
 
     // GSAP ScrollTrigger
     const gsapCtx = gsap.context(() => {
@@ -240,20 +234,33 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound }: HeroFullscreenSc
         trigger: containerRef.current,
         start: 'top top',
         end: 'bottom bottom',
-        scrub: scrubFactor,
+        scrub: 0.3,
         onUpdate: (self) => {
           const progress = self.progress;
           setScrollProgress(progress);
 
-          const rawNorm = Math.min(1, progress / 0.65);
-          const targetFrame = calculateTargetFrame(rawNorm, count);
+          // Navbar smoothly hides during the active 3D scrub (0.10 to 0.78) and shows at start & end
+          const isScrubbing = progress > 0.08 && progress < 0.78;
+          onTransitionStateChange?.(isScrubbing);
+
+          // Full scrub: 0.00 to 0.82 advances all frames 0 to (count - 1)
+          // 0.82 to 1.00 and beyond STAYS PERMANENTLY on the final frame (count - 1)
+          let targetFrame: number;
+          if (progress >= 0.82) {
+            targetFrame = count - 1;
+          } else {
+            const rawProgress = progress / 0.82;
+            const smoothProgress = 0.5 - 0.5 * Math.cos(rawProgress * Math.PI);
+            targetFrame = Math.min(count - 1, Math.max(0, Math.round(smoothProgress * (count - 1))));
+          }
+
           targetFrameRef.current = targetFrame;
 
-          if (progress >= 0.65 && !isSurpriseActiveRef.current) {
+          if (progress >= 0.78 && !isSurpriseActiveRef.current) {
             isSurpriseActiveRef.current = true;
             setIsHoldActive(true);
             soundManager.playSurpriseChime();
-          } else if (progress < 0.58 && isSurpriseActiveRef.current) {
+          } else if (progress < 0.70 && isSurpriseActiveRef.current) {
             isSurpriseActiveRef.current = false;
             setIsHoldActive(false);
           }
@@ -267,13 +274,13 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound }: HeroFullscreenSc
       gsapCtx.revert();
       ScrollTrigger.getAll().forEach((t) => t.kill());
     };
-  }, [manifest, renderCanvas, resizeCanvas]);
+  }, [manifest, onTransitionStateChange, renderCanvas, resizeCanvas]);
 
-  const entryOpacity = Math.max(0, 1 - scrollProgress * 3.5);
-  const entryTranslateY = scrollProgress * -70;
+  const entryOpacity = Math.max(0, 1 - scrollProgress * 3.8);
+  const entryTranslateY = scrollProgress * -80;
 
   return (
-    <section id="hero" ref={containerRef} className="relative w-full h-[450vh] bg-[#0E1218]">
+    <section id="hero" ref={containerRef} className="relative w-full h-[300vh] bg-[#0E1218]">
       
       {/* Sticky Fullscreen Canvas Viewport */}
       <div className="sticky top-0 w-full h-screen overflow-hidden flex items-center justify-center select-none">
@@ -290,7 +297,7 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound }: HeroFullscreenSc
 
         {/* Clean Editorial Opening Layer */}
         <div
-          className="absolute inset-0 z-20 flex flex-col justify-between px-6 sm:px-16 py-24 sm:py-32 pointer-events-none transition-all duration-300"
+          className="absolute inset-0 z-20 flex flex-col justify-between px-6 sm:px-16 py-28 sm:py-36 pointer-events-none transition-all duration-300"
           style={{
             opacity: entryOpacity,
             transform: `translateY(${entryTranslateY}px)`,
@@ -301,7 +308,7 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound }: HeroFullscreenSc
             <div className="flex items-center gap-3">
               <span className="w-8 h-px bg-ochre" />
               <span className="font-mono text-xs tracking-[0.3em] text-ochre uppercase font-medium">
-                VOLUME NO. 04 / SANCTUARY OF DAYLIGHT
+                VOLUME NO. 04 / LIVING SANCTUARY
               </span>
             </div>
           </div>
@@ -340,10 +347,10 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound }: HeroFullscreenSc
 
         {/* Clean Pinned Hold Runway Bottom Card */}
         <div
-          className={`absolute bottom-6 sm:bottom-12 left-0 right-0 z-30 px-4 sm:px-12 flex justify-center transition-all duration-500 ease-out ${
+          className={`absolute bottom-6 sm:bottom-12 left-0 right-0 z-30 px-4 sm:px-12 flex justify-center transition-opacity duration-700 ease-in-out ${
             isHoldActive
-              ? 'opacity-100 translate-y-0 pointer-events-auto'
-              : 'opacity-0 translate-y-8 pointer-events-none'
+              ? 'opacity-100 pointer-events-auto'
+              : 'opacity-0 pointer-events-none'
           }`}
         >
           <div className="w-full max-w-4xl bg-[#11161D]/95 sm:backdrop-blur-xl border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -356,7 +363,7 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound }: HeroFullscreenSc
                 Crafted Without Compromise.
               </h2>
               <p className="text-xs sm:text-sm font-sans text-white/70 max-w-md font-light leading-relaxed">
-                The interior transition has reached full spatial stillness. The space is now yours to inhabit.
+                The transformation has reached full stillness. Continue scrolling to explore the curated works below.
               </p>
             </div>
 

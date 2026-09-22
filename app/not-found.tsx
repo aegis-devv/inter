@@ -1,4 +1,7 @@
+'use client';
+
 import React from 'react';
+import Link from 'next/link';
 
 export default function NotFound() {
   return (
@@ -7,12 +10,12 @@ export default function NotFound() {
       <p className="text-lg font-sans text-charcoal/70 mb-8 font-light">
         The requested space could not be found.
       </p>
-      <a
+      <Link
         href="/"
         className="px-8 py-3.5 rounded-full bg-[#C5A880] text-white font-mono text-xs uppercase tracking-widest hover:bg-[#A4865E] transition-all"
       >
         Return to Atelier
-      </a>
+      </Link>
     </div>
   );
 }

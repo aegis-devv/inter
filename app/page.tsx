@@ -13,6 +13,7 @@ import { soundManager } from '../lib/audio';
 export default function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
+  const [isHeaderHidden, setIsHeaderHidden] = useState(false);
 
   useEffect(() => {
     const unsub = soundManager.subscribe((muted) => {
@@ -44,14 +45,15 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-[#FAF8F5] selection:bg-ochre selection:text-white">
-      {/* Top Floating Glassmorphic Header */}
+      {/* Floating Island Header (Fades during transition, reappears on hold & rest) */}
       <Header
         onOpenMenu={() => setIsMenuOpen(true)}
         isMuted={isMuted}
         onToggleSound={handleToggleSound}
+        isHidden={isHeaderHidden}
       />
 
-      {/* Full-Screen Navigation Drawer Matching Mockup 1 */}
+      {/* Full-Screen Navigation Drawer */}
       <NavigationDrawer
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
@@ -59,22 +61,23 @@ export default function HomePage() {
         onToggleSound={handleToggleSound}
       />
 
-      {/* Full-Bleed 3D 60fps Canvas Scrubbing Hero Runway */}
+      {/* Full-Bleed 3D 60fps Canvas Scrubbing Hero */}
       <HeroFullscreenScrub
         isMuted={isMuted}
         onToggleSound={handleToggleSound}
+        onTransitionStateChange={(isTransitioning) => setIsHeaderHidden(isTransitioning)}
       />
 
-      {/* Editorial Project Showcase Matching Mockup 3 */}
+      {/* Curated Showcase */}
       <ProjectShowcase />
 
-      {/* Interactive Tactile Material & Solar Matrix */}
+      {/* Interactive Material Matrix */}
       <MaterialMatrix />
 
       {/* Atelier Philosophy & Manifesto */}
       <PhilosophyManifesto />
 
-      {/* Atelier Verve Footer */}
+      {/* Footer */}
       <Footer />
     </main>
   );
