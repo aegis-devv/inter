@@ -45,7 +45,6 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound, onTransitionStateC
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
   const [scrollProgress, setScrollProgress] = useState<number>(0);
-  const [isHoldActive, setIsHoldActive] = useState<boolean>(false);
 
   // 1. Clamped nearest-frame selector
   const getBestAvailableImage = useCallback((targetIdx: number): HTMLImageElement | null => {
@@ -54,7 +53,6 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound, onTransitionStateC
     const clamped = Math.max(0, Math.min(Math.round(targetIdx), frames.length - 1));
 
     if (frames[clamped]) return frames[clamped];
-    // Search nearest loaded frame
     for (let offset = 1; offset < frames.length; offset++) {
       if (clamped - offset >= 0 && frames[clamped - offset]) return frames[clamped - offset];
       if (clamped + offset < frames.length && frames[clamped + offset]) return frames[clamped + offset];
@@ -121,7 +119,7 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound, onTransitionStateC
       const diff = target - current;
 
       if (Math.abs(diff) > 0.02) {
-        currentRenderedFrameRef.current += diff * 0.25;
+        currentRenderedFrameRef.current += diff * 0.20;
         renderCanvas(currentRenderedFrameRef.current);
       } else if (current !== target) {
         currentRenderedFrameRef.current = target;
@@ -175,8 +173,8 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound, onTransitionStateC
       renderCanvas(0);
     };
 
-    // 2. Preload Last 30 Frames Immediately (Guarantees final table frame is always in memory)
-    const endStart = Math.max(1, count - 30);
+    // 2. Preload Last 35 Frames Immediately
+    const endStart = Math.max(1, count - 35);
     for (let i = endStart; i < count; i++) {
       const img = new Image();
       img.src = `${prefix}${String(i + 1).padStart(4, '0')}${suffix}`;
@@ -234,35 +232,35 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound, onTransitionStateC
         trigger: containerRef.current,
         start: 'top top',
         end: 'bottom bottom',
-        scrub: 0.3,
+        scrub: 0.2,
         onUpdate: (self) => {
           const progress = self.progress;
           setScrollProgress(progress);
 
-          // Navbar smoothly hides during the active 3D scrub (0.10 to 0.78) and shows at start & end
-          const isScrubbing = progress > 0.08 && progress < 0.78;
-          onTransitionStateChange?.(isScrubbing);
-
-          // Full scrub: 0.00 to 0.82 advances all frames 0 to (count - 1)
-          // 0.82 to 1.00 and beyond STAYS PERMANENTLY on the final frame (count - 1)
+          // Continuous, steady scrub from 0.00 to 0.90 with zero sudden speedup near 75-82%
           let targetFrame: number;
-          if (progress >= 0.82) {
+          if (progress >= 0.90) {
             targetFrame = count - 1;
           } else {
-            const rawProgress = progress / 0.82;
-            const smoothProgress = 0.5 - 0.5 * Math.cos(rawProgress * Math.PI);
-            targetFrame = Math.min(count - 1, Math.max(0, Math.round(smoothProgress * (count - 1))));
+            const raw = progress / 0.90; // 0 to 1
+            // Smooth cosine curve stretching evenly across the whole range
+            const smooth = 0.5 - 0.5 * Math.cos(raw * Math.PI);
+            targetFrame = Math.min(count - 1, Math.max(0, Math.round(smooth * (count - 1))));
           }
 
           targetFrameRef.current = targetFrame;
 
-          if (progress >= 0.78 && !isSurpriseActiveRef.current) {
+          // Seamless Navbar Transparency during Transition
+          if (onTransitionStateChange) {
+            const isMidTransition = progress > 0.08 && progress < 0.88;
+            onTransitionStateChange(isMidTransition);
+          }
+
+          if (progress >= 0.85 && !isSurpriseActiveRef.current) {
             isSurpriseActiveRef.current = true;
-            setIsHoldActive(true);
             soundManager.playSurpriseChime();
-          } else if (progress < 0.70 && isSurpriseActiveRef.current) {
+          } else if (progress < 0.75 && isSurpriseActiveRef.current) {
             isSurpriseActiveRef.current = false;
-            setIsHoldActive(false);
           }
         },
       });
@@ -274,13 +272,17 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound, onTransitionStateC
       gsapCtx.revert();
       ScrollTrigger.getAll().forEach((t) => t.kill());
     };
-  }, [manifest, onTransitionStateChange, renderCanvas, resizeCanvas]);
+  }, [manifest, renderCanvas, resizeCanvas]);
 
-  const entryOpacity = Math.max(0, 1 - scrollProgress * 3.8);
-  const entryTranslateY = scrollProgress * -80;
+  // Gentle, continuous opacity fades
+  const entryOpacity = Math.max(0, 1 - scrollProgress * 3.5);
+  const entryTranslateY = scrollProgress * -60;
+
+  // Bottom card fades in smoothly between 0.68 and 0.88 with NO sudden pop
+  const cardOpacity = scrollProgress < 0.65 ? 0 : Math.min(1, (scrollProgress - 0.65) / 0.22);
 
   return (
-    <section id="hero" ref={containerRef} className="relative w-full h-[300vh] bg-[#0E1218]">
+    <section id="hero" ref={containerRef} className="relative w-full h-[320vh] bg-[#0E1218]">
       
       {/* Sticky Fullscreen Canvas Viewport */}
       <div className="sticky top-0 w-full h-screen overflow-hidden flex items-center justify-center select-none">
@@ -345,13 +347,14 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound, onTransitionStateC
           </div>
         </div>
 
-        {/* Clean Pinned Hold Runway Bottom Card */}
+        {/* Clean Pinned Hold Runway Bottom Card (Continuous Gradual Fade) */}
         <div
-          className={`absolute bottom-6 sm:bottom-12 left-0 right-0 z-30 px-4 sm:px-12 flex justify-center transition-opacity duration-700 ease-in-out ${
-            isHoldActive
-              ? 'opacity-100 pointer-events-auto'
-              : 'opacity-0 pointer-events-none'
-          }`}
+          className="absolute bottom-6 sm:bottom-12 left-0 right-0 z-30 px-4 sm:px-12 flex justify-center transition-all duration-300 pointer-events-none"
+          style={{
+            opacity: cardOpacity,
+            transform: `translateY(${(1 - cardOpacity) * 20}px)`,
+            pointerEvents: cardOpacity > 0.6 ? 'auto' : 'none',
+          }}
         >
           <div className="w-full max-w-4xl bg-[#11161D]/95 sm:backdrop-blur-xl border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6">
             
