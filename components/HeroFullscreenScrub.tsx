@@ -237,13 +237,15 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound, onTransitionStateC
           const progress = self.progress;
           setScrollProgress(progress);
 
-          // Continuous, steady scrub from 0.00 to 0.90 with zero sudden speedup near 75-82%
+          // Refined Pacing: Soft ease-in for first scroller (0.00-0.04), buttery smooth glide (0.04-0.88), rock-solid lock (>= 0.88)
           let targetFrame: number;
-          if (progress >= 0.90) {
+          if (progress >= 0.88) {
             targetFrame = count - 1;
+          } else if (progress <= 0.03) {
+            targetFrame = 0;
           } else {
-            const raw = progress / 0.90; // 0 to 1
-            // Smooth cosine curve stretching evenly across the whole range
+            const raw = (progress - 0.03) / (0.88 - 0.03); // normalized 0 to 1
+            // Smooth cosine S-curve
             const smooth = 0.5 - 0.5 * Math.cos(raw * Math.PI);
             targetFrame = Math.min(count - 1, Math.max(0, Math.round(smooth * (count - 1))));
           }
@@ -252,7 +254,7 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound, onTransitionStateC
 
           // Seamless Navbar Transparency during Transition
           if (onTransitionStateChange) {
-            const isMidTransition = progress > 0.08 && progress < 0.88;
+            const isMidTransition = progress > 0.06 && progress < 0.88;
             onTransitionStateChange(isMidTransition);
           }
 
@@ -274,15 +276,15 @@ export function HeroFullscreenScrub({ isMuted, onToggleSound, onTransitionStateC
     };
   }, [manifest, renderCanvas, resizeCanvas]);
 
-  // Gentle, continuous opacity fades
-  const entryOpacity = Math.max(0, 1 - scrollProgress * 3.5);
-  const entryTranslateY = scrollProgress * -60;
+  // Gentle, luxurious continuous opacity and translateY fades for the initial hero layer
+  const entryOpacity = scrollProgress < 0.04 ? 1 : Math.max(0, 1 - (scrollProgress - 0.04) * 3.2);
+  const entryTranslateY = scrollProgress * -45;
 
-  // Bottom card fades in smoothly between 0.68 and 0.88 with NO sudden pop
-  const cardOpacity = scrollProgress < 0.65 ? 0 : Math.min(1, (scrollProgress - 0.65) / 0.22);
+  // Bottom card fades in smoothly between 0.65 and 0.88 with NO sudden pop
+  const cardOpacity = scrollProgress < 0.65 ? 0 : Math.min(1, (scrollProgress - 0.65) / 0.20);
 
   return (
-    <section id="hero" ref={containerRef} className="relative w-full h-[320vh] bg-[#0E1218]">
+    <section id="hero" ref={containerRef} className="relative w-full h-[480vh] bg-[#0E1218]">
       
       {/* Sticky Fullscreen Canvas Viewport */}
       <div className="sticky top-0 w-full h-screen overflow-hidden flex items-center justify-center select-none">
